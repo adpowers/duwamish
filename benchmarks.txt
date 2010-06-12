@@ -1,0 +1,39 @@
+java -cp ./:../../libs/guava-r04.jar org.andrewhitchcock.duwamish.PageRank
+
+1m2.510s
+
+java -XX:+AggressiveOpts -cp ./:../../libs/guava-r04.jar org.andrewhitchcock.duwamish.PageRank
+
+1m0.062s
+
+java -XX:+AggressiveOpts -XX:+UseCompressedOops -cp ./:../../libs/guava-r04.jar org.andrewhitchcock.duwamish.PageRank
+
+0m12.922s
+
+java -XX:-UseParallelGC -cp ./:../../libs/guava-r04.jar org.andrewhitchcock.duwamish.PageRank
+
+0m54.306s
+
+java -XX:+AggressiveOpts -XX:-UseParallelGC -cp ./:../../libs/guava-r04.jar org.andrewhitchcock.duwamish.PageRank
+
+1m0.412s
+
+java -XX:+AggressiveOpts -XX:+UseCompressedOops -XX:+UnlockExperimentalVMOptions -XX:+UseG1GC -cp ./:../../libs/guava-r04.jar org.andrewhitchcock.duwamish.PageRank
+
+1m6.730s
+
+java -Xmx8192M -cp ./:../../libs/guava-r04.jar org.andrewhitchcock.duwamish.PageRank
+
+0m37.872s
+
+java -XX:+AggressiveOpts -XX:+UseCompressedOops -Xmx8192M -cp ./:../../libs/guava-r04.jar org.andrewhitchcock.duwamish.PageRank
+
+0m13.361s
+
+java -XX:GCTimeRatio=99 -XX:+UseParallelGC -cp ./:../../libs/guava-r04.jar org.andrewhitchcock.duwamish.PageRank
+
+0m14.210s
+
+java -XX:+AggressiveOpts -XX:+UseCompressedOops -XX:GCTimeRatio=99 -XX:+UseParallelGC -cp ./:../../libs/guava-r04.jar org.andrewhitchcock.duwamish.PageRank
+
+0m12.873s
