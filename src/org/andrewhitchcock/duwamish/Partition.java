@@ -15,8 +15,14 @@ public class Partition<V, E, M> {
   private Map<String, Vertex<V, E, M>> vertexes = Maps.newHashMap();
   private Multimap<String, Edge<E>> edges = ArrayListMultimap.create();
   
+  @SuppressWarnings("unchecked")
+  private Map<String, Accumulator> accumulators;
   private Partitioner<V, E, M> partitioner;
   
+  @SuppressWarnings("unchecked")
+  public Partition(Map<String, Accumulator> accumulators) {
+    this.accumulators = accumulators;
+  }
   
   public void addVertex(Vertex<V, E, M> vertex) {
     vertexes.put(vertex.getVertexId(), vertex);
@@ -44,24 +50,63 @@ public class Partition<V, E, M> {
     }
   }
   
-  public boolean runSuperstep(long superstepNumber) {    
-    boolean votedToHalt = true;
+  public Map<String, Object> runSuperstep(long superstepNumber) {
+    Multimap<String, Object> accumulationMessages = ArrayListMultimap.create();
     
     // For each vertex, feed it its messages.
     for (Vertex<V, E, M> vertex : vertexes.values()) {
-      Iterator<M> messagesIterator = previousRoundMessages.removeAll(vertex.getVertexId()).iterator();
-      Iterator<Edge<E>> edgeIterator = edges.get(vertex.getVertexId()).iterator();
-      Context<V, E, M> context = new Context<V, E, M>(superstepNumber, edgeIterator, partitioner);
-      
-      vertex.compute(messagesIterator, context);
-      
-      votedToHalt &= context.getVotedToHalt();
+      Context<V, E, M> context = new Context<V, E, M>(superstepNumber, partitioner, accumulationMessages);
+      Iterable<M> messagesIterable = CountingIterable.create(context, Accumulators.MESSAGE_COUNT, previousRoundMessages.removeAll(vertex.getVertexId()));
+      Iterable<Edge<E>> edgeIterable = CountingIterable.create(context, Accumulators.EDGE_COUNT, edges.get(vertex.getVertexId()));
+      context.setEdgeIterable(edgeIterable);    
+      context.emitAccumulation(Accumulators.VERTEX_COUNT, 1L);
+      vertex.compute(messagesIterable, context);
     }
     
-    // Clean up
+    // Clean up previous messages
     previousRoundMessages.clear();
     
-    return votedToHalt;
+    // Accumulate
+    return Accumulators.getAccumulations(accumulators, accumulationMessages);
+  }
+  
+  private static class CountingIterable<V, E, M, T> implements Iterable<T> {
+    final Context<V, E, M> context;
+    final String name;
+    final Iterator<T> wrapped;
+    
+    public CountingIterable(Context<V, E, M> context, String name, Iterable<T> wrapped) {
+      this.context = context;
+      this.name = name;
+      this.wrapped = wrapped.iterator();
+    }
+    
+    public static <V, E, M, T> CountingIterable <V, E, M, T> create(Context<V, E, M> context, String name, Iterable<T> wrapped) {
+      return new CountingIterable<V, E, M, T>(context, name, wrapped);
+    }
+    
+    @Override
+    public Iterator<T> iterator() {
+      return new Iterator<T>() {
+        @Override
+        public boolean hasNext() {
+          return wrapped.hasNext();
+        }
+
+        @Override
+        public T next() {
+          T next = wrapped.next();
+          context.emitAccumulation(name, 1L);
+          return next;
+        }
+
+        @Override
+        public void remove() {
+          wrapped.remove();
+        }
+      };
+    }
+
   }
   
   private static class Message<M> {

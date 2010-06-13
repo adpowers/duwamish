@@ -1,6 +1,5 @@
 package org.andrewhitchcock.duwamish;
 
-import java.util.Iterator;
 import java.util.List;
 import java.util.Random;
 
@@ -22,25 +21,29 @@ public class PageRank {
       }
 
       @Override
-      public void compute(Iterator<Double> messages, Context<Double, Object, Double> context) {
+      public void compute(Iterable<Double> messages, Context<Double, Object, Double> context) {
+        double originalPageRank = pageRank;
+        
         // Sum incoming messages and adjust our page rank accordingly
         if (context.getSuperstepNumber() > 0) {
           double sum = 0;
-          while (messages.hasNext()) {
-            sum += messages.next();
+          for (Double message : messages) {
+            sum += message;
           } 
           pageRank = 0.15 / vertexCount + 0.85 * sum;
         }
         
         // Send page rank to our neighbors
         if (context.getSuperstepNumber() < runCount) {
-          List<Edge<Object>> outEdges = Lists.newArrayList(context.getEdgeIterator());
+          List<Edge<Object>> outEdges = Lists.newArrayList(context.getEdgeIterable());
           
           double outValue = pageRank / outEdges.size();
           for (Edge<Object> outEdge : outEdges) {
             context.sendMessageTo(outEdge.getTargetVertexId(), outValue);
           }
         }
+        
+        context.emitAccumulation("PageRankChange", Math.abs(originalPageRank - pageRank));
         
         if (getVertexId().equals("20")) {
           System.out.println("PageRank: " + pageRank);
@@ -49,6 +52,7 @@ public class PageRank {
     }
 
     Duwamish<Double, Object, Double> duwamish = Duwamish.createWithPartitionCount(32);
+    duwamish.addAccumulator("PageRankChange", new DoubleSumAccumulator());
     
     // Setup vertexes and edges
     for (int i = 0; i < vertexCount; i++) {

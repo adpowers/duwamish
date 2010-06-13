@@ -1,25 +1,29 @@
 package org.andrewhitchcock.duwamish;
 
-import java.util.Iterator;
+import com.google.common.collect.Multimap;
 
 public class Context<V, E, M> {
   private long superstepNumber;
-  private Iterator<Edge<E>> edgeIterator;
+  private Iterable<Edge<E>> edgeIterable;
   private Partitioner<V, E, M> partitioner;
-  private boolean halted = false;
+  private Multimap<String, Object> accumulationMessages;
   
-  public Context(long superstepNumber, Iterator<Edge<E>> edgeIterator, Partitioner<V, E, M> partitioner) {
+  public Context(long superstepNumber, Partitioner<V, E, M> partitioner, Multimap<String, Object> accumulationMessages) {
     this.superstepNumber = superstepNumber;
-    this.edgeIterator = edgeIterator;
     this.partitioner = partitioner;
+    this.accumulationMessages = accumulationMessages;
+  }
+  
+  public void setEdgeIterable(Iterable<Edge<E>> edgeIterable) {
+    this.edgeIterable = edgeIterable;
   }
   
   public long getSuperstepNumber() {
     return superstepNumber;
   }
   
-  public Iterator<Edge<E>> getEdgeIterator() {
-    return edgeIterator;
+  public Iterable<Edge<E>> getEdgeIterable() {
+    return edgeIterable;
   }
   
   public void sendMessageTo(String vertexId, M message) {
@@ -27,10 +31,10 @@ public class Context<V, E, M> {
   }
   
   public void voteToHalt() {
-    halted = true;
+    emitAccumulation(Accumulators.VOTE_TO_HALT, Boolean.TRUE);
   }
   
-  public boolean getVotedToHalt() {
-    return halted;
+  public void emitAccumulation(String name, Object value) {
+    accumulationMessages.put(name, value);
   }
 }
