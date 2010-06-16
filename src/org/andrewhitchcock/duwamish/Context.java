@@ -7,6 +7,7 @@ public class Context<V, E, M> {
   private Iterable<Edge<E>> edgeIterable;
   private Partitioner<V, E, M> partitioner;
   private Multimap<String, Object> accumulationMessages;
+  private boolean votedToHalt = false;
   
   public Context(long superstepNumber, Partitioner<V, E, M> partitioner, Multimap<String, Object> accumulationMessages) {
     this.superstepNumber = superstepNumber;
@@ -31,7 +32,11 @@ public class Context<V, E, M> {
   }
   
   public void voteToHalt() {
-    emitAccumulation(Accumulators.VOTE_TO_HALT, Boolean.TRUE);
+    votedToHalt = true;
+  }
+  
+  public boolean getVotedToHalt() {
+    return votedToHalt;
   }
   
   public void emitAccumulation(String name, Object value) {

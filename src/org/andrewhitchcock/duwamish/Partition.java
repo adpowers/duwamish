@@ -59,8 +59,9 @@ public class Partition<V, E, M> {
       Iterable<M> messagesIterable = CountingIterable.create(context, Accumulators.MESSAGE_COUNT, previousRoundMessages.removeAll(vertex.getVertexId()));
       Iterable<Edge<E>> edgeIterable = CountingIterable.create(context, Accumulators.EDGE_COUNT, edges.get(vertex.getVertexId()));
       context.setEdgeIterable(edgeIterable);    
-      context.emitAccumulation(Accumulators.VERTEX_COUNT, 1L);
       vertex.compute(messagesIterable, context);
+      context.emitAccumulation(Accumulators.VERTEX_COUNT, 1L);
+      context.emitAccumulation(Accumulators.VOTE_TO_HALT, context.getVotedToHalt());
     }
     
     // Clean up previous messages

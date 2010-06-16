@@ -21,6 +21,8 @@ public class Duwamish<V, E, M> {
   private List<Partition<V, E, M>> partitions;
   private Partitioner<V, E, M> partitioner;
   
+  private HaltDecider haltDecider;
+  
   
   private Duwamish(int partitionCount) {
     accumulators = Maps.newHashMap();
@@ -49,6 +51,10 @@ public class Duwamish<V, E, M> {
     accumulators.put(name, accumulator);
   }
   
+  public void setHaltDecider(HaltDecider haltDecider) {
+    this.haltDecider = haltDecider;
+  }
+  
   public void addVertex(Vertex<V, E, M> vertex) {
     partitioner.getPartitionByVertex(vertex.getVertexId()).addVertex(vertex);
   }
@@ -60,17 +66,21 @@ public class Duwamish<V, E, M> {
   public void run(int runCount) {
     int threadPoolSize = 8;
     try {
-      for (long i = 0; i < runCount; i++) {
+      for (long superstepNumber = 0; superstepNumber < runCount; superstepNumber++) {
         preparePartitions(threadPoolSize);
         
-        Map<String, Object> results = runSuperstep(threadPoolSize, i);
+        Map<String, Object> accumulations = runSuperstep(threadPoolSize, superstepNumber);
         
         // Print accumulations
-        System.out.println("Round: " + i);
-        for (Map.Entry<String, Object> entry : results.entrySet()) {
+        System.out.println("Round: " + superstepNumber);
+        for (Map.Entry<String, Object> entry : accumulations.entrySet()) {
           System.out.println("    " + entry.getKey() + ": " + entry.getValue());
         }
         System.out.println();
+        
+        if (decideToHalt(superstepNumber, accumulations)) {
+          return;
+        }
       }
     } catch (Exception e) {
       throw new RuntimeException(e);
@@ -106,6 +116,15 @@ public class Duwamish<V, E, M> {
       }
     }
     return Accumulators.getAccumulations(accumulators, accumulationMessages);
+  }
+  
+  private boolean decideToHalt(long superstepNumber, Map<String, Object> accumulations) {
+    if (haltDecider != null) {
+      if (haltDecider.shouldHalt(superstepNumber, accumulations)) {
+        return true;
+      }
+    }
+    return new DefaultHaltDecider().shouldHalt(superstepNumber, accumulations);
   }
   
   

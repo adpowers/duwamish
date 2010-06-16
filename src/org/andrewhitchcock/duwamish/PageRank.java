@@ -1,6 +1,7 @@
 package org.andrewhitchcock.duwamish;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Random;
 
 import com.google.common.collect.Lists;
@@ -14,7 +15,7 @@ public class PageRank {
     final int runCount = 200;
     
     class PageRankVertex extends Vertex<Double, Object, Double> {
-      Double pageRank = 10.0;
+      Double pageRank = 1.0;
       
       public PageRankVertex(String vertexId) {
         super(vertexId);
@@ -30,7 +31,7 @@ public class PageRank {
           for (Double message : messages) {
             sum += message;
           } 
-          pageRank = 0.15 / vertexCount + 0.85 * sum;
+          pageRank = 0.15 + 0.85 * sum;
         }
         
         // Send page rank to our neighbors
@@ -45,6 +46,13 @@ public class PageRank {
         
         context.emitAccumulation("PageRankChange", Math.abs(originalPageRank - pageRank));
         
+        if (context.getSuperstepNumber() > 0) {
+          double percentChange = (pageRank - originalPageRank) / originalPageRank;
+          if (Math.abs(percentChange) < 0.01) {
+            context.voteToHalt();
+          }
+        }
+        
         if (getVertexId().equals("20")) {
           System.out.println("PageRank: " + pageRank);
         }
@@ -53,6 +61,12 @@ public class PageRank {
 
     Duwamish<Double, Object, Double> duwamish = Duwamish.createWithPartitionCount(32);
     duwamish.addAccumulator("PageRankChange", new DoubleSumAccumulator());
+    duwamish.setHaltDecider(new HaltDecider() {
+      @Override
+      public boolean shouldHalt(long superstepNumber, Map<String, Object> accumulations) {
+        return (Boolean)accumulations.get(Accumulators.VOTE_TO_HALT);
+      }
+    });
     
     // Setup vertexes and edges
     for (int i = 0; i < vertexCount; i++) {

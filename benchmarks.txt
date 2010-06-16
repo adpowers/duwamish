@@ -37,3 +37,8 @@ java -XX:GCTimeRatio=99 -XX:+UseParallelGC -cp ./:../../libs/guava-r04.jar org.a
 java -XX:+AggressiveOpts -XX:+UseCompressedOops -XX:GCTimeRatio=99 -XX:+UseParallelGC -cp ./:../../libs/guava-r04.jar org.andrewhitchcock.duwamish.PageRank
 
 0m12.873s
+
+
+== Consider for large heaps
+
+time java -Xmx8G -XX:MaxNewSize=1G -XX:+UseParNewGC  -XX:+UseConcMarkSweepGC -XX:+CMSParallelRemarkEnabled -XX:+AggressiveOpts -cp ./:../../libs/guava-r04.jar org.andrewhitchcock.duwamish.PageRank
