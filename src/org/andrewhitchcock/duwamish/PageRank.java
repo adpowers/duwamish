@@ -45,10 +45,12 @@ public class PageRank {
         }
         
         context.emitAccumulation("PageRankChange", Math.abs(originalPageRank - pageRank));
+        context.emitAccumulation("MaxPageRank", pageRank);
+        context.emitAccumulation("MinPageRank", pageRank);
         
         if (context.getSuperstepNumber() > 0) {
           double percentChange = (pageRank - originalPageRank) / originalPageRank;
-          if (Math.abs(percentChange) < 0.01) {
+          if (Math.abs(percentChange) < 0.00001) {
             context.voteToHalt();
           }
         }
@@ -61,6 +63,8 @@ public class PageRank {
 
     Duwamish<Double, Object, Double> duwamish = Duwamish.createWithPartitionCount(32);
     duwamish.addAccumulator("PageRankChange", new DoubleSumAccumulator());
+    duwamish.addAccumulator("MaxPageRank", new DoubleMaxAccumulator());
+    duwamish.addAccumulator("MinPageRank", new DoubleMinAccumulator());
     duwamish.setHaltDecider(new HaltDecider() {
       @Override
       public boolean shouldHalt(long superstepNumber, Map<String, Object> accumulations) {
