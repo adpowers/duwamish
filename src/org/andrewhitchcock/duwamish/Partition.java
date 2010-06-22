@@ -1,11 +1,13 @@
 package org.andrewhitchcock.duwamish;
 
+import java.util.Collection;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
 import com.google.common.collect.ArrayListMultimap;
+import com.google.common.collect.ForwardingMultimap;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Multimap;
 
@@ -51,7 +53,7 @@ public class Partition<V, E, M> {
   }
   
   public Map<String, Object> runSuperstep(long superstepNumber) {
-    Multimap<String, Object> accumulationMessages = ArrayListMultimap.create();
+    Multimap<String, Object> accumulationMessages = CombiningMultimap.create(accumulators, 128);
     
     // For each vertex, feed it its messages.
     for (Vertex<V, E, M> vertex : vertexes.values()) {
@@ -69,6 +71,42 @@ public class Partition<V, E, M> {
     
     // Accumulate
     return Accumulators.getAccumulations(accumulators, accumulationMessages);
+  }
+  
+  @SuppressWarnings("unchecked")
+  private static class CombiningMultimap<A, B> extends ForwardingMultimap<A, B> {
+    private Multimap<A, B> backingMultimap;
+    private Map<A, Accumulator> accumulators;
+    private long numberOfEntriesBeforeCombining;
+    
+    public CombiningMultimap(Map<A, Accumulator> accumulators, long numberOfEntriesBeforeCombining) {
+      this.backingMultimap = ArrayListMultimap.create();
+      this.accumulators = accumulators;
+      this.numberOfEntriesBeforeCombining = numberOfEntriesBeforeCombining;
+    }
+    
+    @Override
+    public boolean put(A key, B value) {
+      backingMultimap.put(key, value);
+      Collection<B> resultantCollection = backingMultimap.get(key);
+      if (resultantCollection.size() >= numberOfEntriesBeforeCombining) {
+        if (accumulators.containsKey(key)) {
+          B newValue = (B)accumulators.get(key).accumulate(resultantCollection);
+          backingMultimap.removeAll(key);
+          backingMultimap.put(key, newValue);
+        }
+      }
+      return true; // we don't really follow the contract anyway, so this doesn't matter
+    }
+    
+    @Override
+    protected Multimap<A, B> delegate() {
+      return backingMultimap;
+    }
+    
+    public static <A, B> CombiningMultimap<A, B> create(Map<A, Accumulator> accumulators, long numberOfEntriesBeforeCombining) {
+      return new CombiningMultimap<A, B>(accumulators, numberOfEntriesBeforeCombining);
+    }
   }
   
   private static class CountingIterable<V, E, M, T> implements Iterable<T> {
