@@ -1,6 +1,8 @@
-package org.andrewhitchcock.duwamish;
+package org.andrewhitchcock.duwamish.util;
 
 import java.util.Map;
+
+import org.andrewhitchcock.duwamish.model.HaltDecider;
 
 public class DefaultHaltDecider implements HaltDecider {
   @Override

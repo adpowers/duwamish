@@ -1,5 +1,8 @@
 package org.andrewhitchcock.duwamish;
 
+import org.andrewhitchcock.duwamish.model.Edge;
+import org.andrewhitchcock.duwamish.model.Partitioner;
+
 import com.google.common.collect.Multimap;
 
 public class Context<V, E, M> {

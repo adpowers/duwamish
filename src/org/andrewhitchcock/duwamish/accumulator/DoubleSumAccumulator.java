@@ -1,4 +1,6 @@
-package org.andrewhitchcock.duwamish;
+package org.andrewhitchcock.duwamish.accumulator;
+
+import org.andrewhitchcock.duwamish.model.Accumulator;
 
 public class DoubleSumAccumulator implements Accumulator<Double> {
   @Override

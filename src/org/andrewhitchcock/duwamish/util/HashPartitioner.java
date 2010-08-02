@@ -1,6 +1,9 @@
-package org.andrewhitchcock.duwamish;
+package org.andrewhitchcock.duwamish.util;
 
 import java.util.List;
+
+import org.andrewhitchcock.duwamish.Partition;
+import org.andrewhitchcock.duwamish.model.Partitioner;
 
 public class HashPartitioner<V, E, M> extends Partitioner<V, E, M> {
   private List<Partition<V, E, M>> partitions;

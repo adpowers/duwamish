@@ -1,4 +1,4 @@
-package org.andrewhitchcock.duwamish;
+package org.andrewhitchcock.duwamish.model;
 
 public class Edge<E> {
   private String targetVertexId;

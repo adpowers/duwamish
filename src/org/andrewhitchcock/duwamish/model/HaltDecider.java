@@ -1,4 +1,4 @@
-package org.andrewhitchcock.duwamish;
+package org.andrewhitchcock.duwamish.model;
 
 import java.util.Map;
 

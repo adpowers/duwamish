@@ -1,4 +1,6 @@
-package org.andrewhitchcock.duwamish;
+package org.andrewhitchcock.duwamish.model;
+
+import org.andrewhitchcock.duwamish.Context;
 
 public abstract class Vertex<V, E, M> {
   private String vertexId;

@@ -6,6 +6,12 @@ import java.util.Map;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
+import org.andrewhitchcock.duwamish.model.Accumulator;
+import org.andrewhitchcock.duwamish.model.Edge;
+import org.andrewhitchcock.duwamish.model.Partitioner;
+import org.andrewhitchcock.duwamish.model.Vertex;
+import org.andrewhitchcock.duwamish.util.Accumulators;
+
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.ForwardingMultimap;
 import com.google.common.collect.Maps;

@@ -1,8 +1,18 @@
-package org.andrewhitchcock.duwamish;
+package org.andrewhitchcock.duwamish.example;
 
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+
+import org.andrewhitchcock.duwamish.Context;
+import org.andrewhitchcock.duwamish.Duwamish;
+import org.andrewhitchcock.duwamish.accumulator.DoubleMaxAccumulator;
+import org.andrewhitchcock.duwamish.accumulator.DoubleMinAccumulator;
+import org.andrewhitchcock.duwamish.accumulator.DoubleSumAccumulator;
+import org.andrewhitchcock.duwamish.model.Edge;
+import org.andrewhitchcock.duwamish.model.HaltDecider;
+import org.andrewhitchcock.duwamish.model.Vertex;
+import org.andrewhitchcock.duwamish.util.Accumulators;
 
 import com.google.common.collect.Lists;
 

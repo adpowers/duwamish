@@ -1,6 +1,8 @@
-package org.andrewhitchcock.duwamish;
+package org.andrewhitchcock.duwamish.util;
 
 import java.util.Map;
+
+import org.andrewhitchcock.duwamish.model.Accumulator;
 
 import com.google.common.collect.Maps;
 import com.google.common.collect.Multimap;
@@ -12,7 +14,7 @@ public class Accumulators {
   public static final String VOTE_TO_HALT = "VoteToHalt";
   
   @SuppressWarnings("unchecked")
-  static Map<String, Object> getAccumulations(Map<String, Accumulator> accumulators, Multimap<String, Object> accumulationMessages) {
+  public static Map<String, Object> getAccumulations(Map<String, Accumulator> accumulators, Multimap<String, Object> accumulationMessages) {
     Map<String, Object> results = Maps.newHashMap();
     for (Map.Entry<String, Accumulator> entry : accumulators.entrySet()) {
       String name = entry.getKey();
