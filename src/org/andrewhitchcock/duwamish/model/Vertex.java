@@ -19,4 +19,8 @@ public abstract class Vertex<V, E, M> {
   public V getValue() {
     return value;
   }
+  
+  public void setValue(V value) {
+    this.value = value;
+  }
 }

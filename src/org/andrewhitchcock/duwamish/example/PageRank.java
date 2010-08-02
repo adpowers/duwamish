@@ -19,21 +19,27 @@ import com.google.common.collect.Lists;
 public class PageRank {
   public static void main(String[] args) throws Exception {
     Random random = new Random();
-    
-    final int vertexCount = 4096;
-    final int maxEdgeCountPerVertex = 128;
+
     final int runCount = 200;
+    int vertexCount = 4096;
+    int maxEdgeCountPerVertex = 128;
+
+    if (args.length == 2) {
+      vertexCount = Integer.parseInt(args[0]);
+      random.setSeed(Long.parseLong(args[1]));
+    }
     
     class PageRankVertex extends Vertex<Double, Object, Double> {
-      Double pageRank = 1.0;
       
       public PageRankVertex(String vertexId) {
         super(vertexId);
+        setValue(1.0);
       }
 
       @Override
       public void compute(Iterable<Double> messages, Context<Double, Object, Double> context) {
-        double originalPageRank = pageRank;
+        double originalPageRank = getValue();
+        double pageRank = getValue();
         
         // Sum incoming messages and adjust our page rank accordingly
         if (context.getSuperstepNumber() > 0) {
@@ -53,6 +59,8 @@ public class PageRank {
             context.sendMessageTo(outEdge.getTargetVertexId(), outValue);
           }
         }
+        
+        setValue(pageRank);
         
         context.emitAccumulation("PageRankChange", Math.abs(originalPageRank - pageRank));
         context.emitAccumulation("MaxPageRank", pageRank);
