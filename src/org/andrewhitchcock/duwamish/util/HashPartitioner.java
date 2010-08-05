@@ -14,6 +14,6 @@ public class HashPartitioner<V, E, M> extends Partitioner<V, E, M> {
   
   @Override
   public Partition<V, E, M> getPartitionByVertex(String vertexId) {
-    return partitions.get(vertexId.hashCode() % partitions.size());
+    return partitions.get(Math.abs(vertexId.hashCode()) % partitions.size());
   }
 }
