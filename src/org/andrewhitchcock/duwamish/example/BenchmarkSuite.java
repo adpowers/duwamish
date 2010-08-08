@@ -23,8 +23,8 @@ public class BenchmarkSuite {
     
     tests.put(Recommendations.class, Lists.newArrayList(
         Lists.newArrayList("1000", "10000", "64", "1"),
-        Lists.newArrayList("5000", "50000", "64", "1"),
-        Lists.newArrayList("10000", "100000", "64", "1")));
+        Lists.newArrayList("5000", "50000", "64", "1")));
+        //Lists.newArrayList("10000", "100000", "64", "1")));
     
     tests.put(ShortestPath.class, Lists.newArrayList(
         Lists.newArrayList("5000", "1"),

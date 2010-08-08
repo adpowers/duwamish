@@ -1,0 +1,12 @@
+commit 943b345abd6ae82bfd4abfd271d7ad81fe242325
+org.andrewhitchcock.duwamish.example.Recommendations 1000, 10000, 64, 1 bestTime 238137
+org.andrewhitchcock.duwamish.example.Recommendations 5000, 50000, 64, 1 bestTime 1378275
+org.andrewhitchcock.duwamish.example.ShortestPath 5000, 1 bestTime 679
+org.andrewhitchcock.duwamish.example.ShortestPath 20000, 1 bestTime 2515
+org.andrewhitchcock.duwamish.example.ShortestPath 100000, 1 bestTime 15662
+org.andrewhitchcock.duwamish.example.ShortestPath 250000, 1 bestTime 49002
+org.andrewhitchcock.duwamish.example.ShortestPath 500000, 1 bestTime 258408
+org.andrewhitchcock.duwamish.example.PageRank 5000, 1 bestTime 3573
+org.andrewhitchcock.duwamish.example.PageRank 20000, 1 bestTime 13749
+org.andrewhitchcock.duwamish.example.PageRank 100000, 1 bestTime 88499
+org.andrewhitchcock.duwamish.example.PageRank 250000, 1 bestTime 348403
