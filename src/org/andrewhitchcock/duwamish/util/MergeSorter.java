@@ -4,6 +4,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.lang.reflect.Method;
 import java.util.ArrayDeque;
 import java.util.Arrays;
 import java.util.Comparator;
@@ -29,10 +30,17 @@ public class MergeSorter<T extends Message> {
   int sortCount = 0;
   Deque<File> mergeQueue = new ArrayDeque<File>();
   
+  final Method builderMethod;
+  
   private MergeSorter(Class<T> clazz, Comparator<T> comparator, File tempDir) {
     this.clazz = clazz;
     this.comparator = comparator;
     this.tempDir = tempDir;
+    try {
+      this.builderMethod = clazz.getMethod("newBuilder");
+    } catch (Exception e) {
+      throw new RuntimeException();
+    }
   }
   
   public static <T extends Message> MergeSorter<T> create(Class<T> clazz, Comparator<T> comparator, File tempDir) {
@@ -65,6 +73,7 @@ public class MergeSorter<T extends Message> {
     }
   }
   
+  @SuppressWarnings("unchecked")
   private void sortOneFile(File inputFile) {
     InputStream inputStream = FileUtil.newInputStream(inputFile);
 
@@ -187,7 +196,7 @@ public class MergeSorter<T extends Message> {
   @SuppressWarnings("unchecked")
   private T getNext(InputStream inputStream) {
     try {
-      Builder builder = (Builder)(clazz.getMethod("newBuilder").invoke(null));
+      Builder builder = (Builder)(builderMethod.invoke(null));
       boolean success = builder.mergeDelimitedFrom(inputStream);
       if (success) {
         return (T)builder.build();
