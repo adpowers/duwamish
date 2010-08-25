@@ -41,6 +41,8 @@ public class MergeSorterTest {
     MergeSorter<DoubleMessage> ms = MergeSorter.create(DoubleMessage.class, new DoubleMessageComparator(), new File("/tmp/merger/"));
     ms.sort(outputFile, inputFile);
     
+    long endTime = System.currentTimeMillis();
+    
     InputStream is = FileUtil.newInputStream(outputFile);
     DoubleMessage message = getNext(is);
     double previous = message.getValue();
@@ -55,7 +57,7 @@ public class MergeSorterTest {
     }
     
     System.out.println("encountered: " + encountered);
-    return System.currentTimeMillis() - startTime;
+    return endTime - startTime;
   }
   
   
