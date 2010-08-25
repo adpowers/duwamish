@@ -8,15 +8,18 @@ import java.util.ArrayDeque;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.Deque;
+import java.util.List;
 
+import com.google.common.collect.Lists;
 import com.google.protobuf.Message;
 import com.google.protobuf.Message.Builder;
 
 
 public class MergeSorter<T extends Message> {
   
-  final int recordsToSortAtOnce = 1000;
-  final int numberToMergeAtOnce = 10;
+  final int recordsToSortAtOnce = 5000;
+  final int numberToMergeInMemory = 100;
+  final int numberToMergeFromDisk = 50;
 
   final Class<T> clazz;
   @SuppressWarnings("unchecked")
@@ -25,8 +28,6 @@ public class MergeSorter<T extends Message> {
   
   int sortCount = 0;
   Deque<File> mergeQueue = new ArrayDeque<File>();
-  
-  final Object[] records = new Object[recordsToSortAtOnce];
   
   private MergeSorter(Class<T> clazz, Comparator<T> comparator, File tempDir) {
     this.clazz = clazz;
@@ -46,10 +47,9 @@ public class MergeSorter<T extends Message> {
     }
     
     // merge files
-    System.out.println("Merging");
     while (!mergeQueue.isEmpty()) {
-      boolean moreThanOnePassLeft = mergeQueue.size() > numberToMergeAtOnce;
-      int currentPassSize = moreThanOnePassLeft ? numberToMergeAtOnce : mergeQueue.size();
+      boolean moreThanOnePassLeft = mergeQueue.size() > numberToMergeFromDisk;
+      int currentPassSize = moreThanOnePassLeft ? numberToMergeFromDisk : mergeQueue.size();
       
       File[] inputs = new File[currentPassSize];
       for (int i = 0; i < currentPassSize; i++) {
@@ -57,7 +57,7 @@ public class MergeSorter<T extends Message> {
       }
       
       File output = moreThanOnePassLeft ? getNextFile() : outputFile;
-      merge(output, inputs);
+      mergeFiles(output, inputs);
       
       for (int i = 0; i < currentPassSize; i++) {
         inputs[i].delete();
@@ -67,34 +67,56 @@ public class MergeSorter<T extends Message> {
   
   private void sortOneFile(File inputFile) {
     InputStream inputStream = FileUtil.newInputStream(inputFile);
+
+    List<Object[]> inMemorySortedArrays = Lists.newArrayList();
+    Object[] records = new Object[recordsToSortAtOnce];
     
     int pos = 0;
     T next = getNext(inputStream);
     while (next != null) {
       if (pos == recordsToSortAtOnce) {
-        sortAndWriteRecordsToFile(getNextFile(), pos);
+        Arrays.sort(records, 0, pos, comparator);
+        inMemorySortedArrays.add(records);
+        records = new Object[recordsToSortAtOnce];
         pos = 0;
       }
+      if (inMemorySortedArrays.size() > numberToMergeInMemory) {
+        mergeAndWriteRecordsToFile(getNextFile(), inMemorySortedArrays);
+      }
+      
       records[pos] = next;
       pos++;
       next = getNext(inputStream);
     }
     
     if (pos != 0) {
-      sortAndWriteRecordsToFile(getNextFile(), pos);
+      Arrays.sort(records, 0, pos, comparator);
+      inMemorySortedArrays.add(records);
+    }
+    if (!inMemorySortedArrays.isEmpty()) {
+      mergeAndWriteRecordsToFile(getNextFile(), inMemorySortedArrays);
     }
     
     FileUtil.closeAll(inputStream);
   }
   
   @SuppressWarnings("unchecked")
-  private void sortAndWriteRecordsToFile(File outputFile, int count) {
-    Arrays.sort(records, 0, count, comparator);
+  private void mergeAndWriteRecordsToFile(File outputFile, List<Object[]> inMemorySortedArrays) {
+    InMemoryMergeEntry[] entries = new InMemoryMergeEntry[inMemorySortedArrays.size()];
+    for (int i = 0; i < entries.length; i++) {
+      entries[i] = new InMemoryMergeEntry();
+      entries[i].values = inMemorySortedArrays.get(i);
+    }
+    inMemorySortedArrays.clear();
+    
     try {
       OutputStream outputStream = FileUtil.newOutputStream(outputFile);
-      for (int i = 0; i < count; i++) {
-        ((T)records[i]).writeDelimitedTo(outputStream);
-        records[i] = null;
+      int bestSoFar = returnLowestIndex(entries);
+      while (bestSoFar != -1) {
+        T current = (T)(entries[bestSoFar].values[entries[bestSoFar].position]);
+        current.writeDelimitedTo(outputStream);
+        entries[bestSoFar].position++;
+        bestSoFar = returnLowestIndex(entries);
       }
       FileUtil.closeAll(outputStream);
     } catch (IOException e) {
@@ -102,11 +124,28 @@ public class MergeSorter<T extends Message> {
     }
   }
   
-  private void merge(File outputFile, File ... inputFiles) {
+  @SuppressWarnings("unchecked")
+  private int returnLowestIndex(InMemoryMergeEntry[] entries) {
+    int bestIndexSoFar = -1;
+    T bestSoFar = null;
+    for (int i = 0; i < entries.length; i++) {
+      InMemoryMergeEntry entry = entries[i];
+      if (entry.position < entry.values.length) {
+        T current = (T)entry.values[entry.position];
+        if (current != null && (bestSoFar == null || comparator.compare(bestSoFar, current) > 0)) {
+          bestIndexSoFar = i;
+          bestSoFar = current;
+        }
+      }
+    }
+    return bestIndexSoFar;
+  }
+  
+  private void mergeFiles(File outputFile, File ... inputFiles) {
     @SuppressWarnings("unchecked")
-    MergeEntry<T>[] entries = new MergeEntry[inputFiles.length];
+    FileMergeEntry<T>[] entries = new FileMergeEntry[inputFiles.length];
     for (int i = 0; i < inputFiles.length; i++) {
-      entries[i] = new MergeEntry<T>();
+      entries[i] = new FileMergeEntry<T>();
       entries[i].inputStream = FileUtil.newInputStream(inputFiles[i]);
       entries[i].value = getNext(entries[i].inputStream);
     }
@@ -131,7 +170,7 @@ public class MergeSorter<T extends Message> {
   }
   
   @SuppressWarnings("unchecked")
-  private int returnLowestIndex(MergeEntry<T>[] entries) {
+  private int returnLowestIndex(FileMergeEntry<T>[] entries) {
     int bestIndexSoFar = -1;
     T bestSoFar = null;
     for (int i = 0; i < entries.length; i++) {
@@ -166,8 +205,13 @@ public class MergeSorter<T extends Message> {
     return temp;
   }
   
-  private static class MergeEntry<T> {
+  private static class FileMergeEntry<T> {
     InputStream inputStream;
     T value;
+  }
+  
+  private static class InMemoryMergeEntry {
+    Object[] values;
+    int position = 0;
   }
 }

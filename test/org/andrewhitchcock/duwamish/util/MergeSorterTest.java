@@ -56,7 +56,10 @@ public class MergeSorterTest {
       message = getNext(is);
     }
     
-    System.out.println("encountered: " + encountered);
+    if (encountered != count) {
+      throw new RuntimeException("Bug!");
+    }
+    
     return endTime - startTime;
   }
   
