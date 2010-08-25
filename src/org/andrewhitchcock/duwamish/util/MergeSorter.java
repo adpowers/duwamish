@@ -18,8 +18,8 @@ import com.google.protobuf.Message.Builder;
 
 public class MergeSorter<T extends Message> {
   
-  final int recordsToSortAtOnce = 5000;
-  final int numberToMergeInMemory = 100;
+  final int recordsToSortAtOnce = 1000;
+  final int numberToMergeInMemory = 20;
   final int numberToMergeFromDisk = 50;
 
   final Class<T> clazz;

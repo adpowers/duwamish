@@ -14,12 +14,10 @@ public class MergeSorterTest {
   public static void main(String[] args) throws Exception {
     System.out.println(test(50000));
     System.out.println(test(100000));
-    System.out.println(test(10000000));
+    System.out.println(test(1000000));
   }
   
-  private static long test(int count) throws Exception {
-    long startTime = System.currentTimeMillis();
-    
+  private static long test(int count) throws Exception {   
     File inputFile = new File("/tmp/input");
     File outputFile = new File("/tmp/output");
     if (inputFile.exists()) {
@@ -38,6 +36,8 @@ public class MergeSorterTest {
     
     FileUtil.closeAll(os);
     
+    long startTime = System.currentTimeMillis();
+
     MergeSorter<DoubleMessage> ms = MergeSorter.create(DoubleMessage.class, new DoubleMessageComparator(), new File("/tmp/merger/"));
     ms.sort(outputFile, inputFile);
     
