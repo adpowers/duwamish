@@ -92,7 +92,7 @@ public abstract class ProtocolBufferReader<T> implements Iterator<T>, Closeable 
       @SuppressWarnings("unchecked")
       @Override
       protected void getNext() {
-        if (index < objects.length) {
+        if (index < objects.length && objects[index] != null) {
           nextValue = (A) objects[index];
           success = true;
           index++;
