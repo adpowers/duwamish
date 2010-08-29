@@ -2,25 +2,8 @@ package org.andrewhitchcock.duwamish.model;
 
 import org.andrewhitchcock.duwamish.Context;
 
-public abstract class Vertex<V, E, M> {
-  private String vertexId;
-  private V value;
-  
-  public Vertex(String vertexId) {
-    this.vertexId = vertexId;
-  }
-  
-  public abstract void compute(Iterable<M> messages, Context<V, E, M> context);
-  
-  public String getVertexId() {
-    return vertexId;
-  }
-  
-  public V getValue() {
-    return value;
-  }
-  
-  public void setValue(V value) {
-    this.value = value;
-  }
+import com.google.protobuf.Message;
+
+public abstract class Vertex<V extends Message, E extends Message, M extends Message> {
+  public abstract V compute(String vertexId, V value, Iterable<M> messages, Context<V, E, M> context);
 }

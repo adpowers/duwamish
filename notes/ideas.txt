@@ -1,10 +1,6 @@
 Ideas
 
-* Store vertexes in sorted order as serialized protobuf objects in a byte array.
-* Receive messages in a byte array using the same method.
-* When it comes time to run
-** Bucket and merge sort the received messages until they are ordered by edge destination.
-** Read edges and messages by streaming through the byte array and unserializing the objects.
 * For vertexes, have two byte arrays, one that stores the active vertexes and another for inactive.
 ** Do a merge sort on these two arrays when scanning through them.
-* Perhaps store the partition output locally per target and then hand that directly to the target when done.
+* Replace the Edge with a MappedByteBuffer backed InputStream. Do we get a speed up?
+* Switch to FileBackedOutputStream (and compliments) so small buffers are kept in memory.

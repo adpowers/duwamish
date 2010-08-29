@@ -5,6 +5,8 @@ import java.util.Random;
 import org.andrewhitchcock.duwamish.Context;
 import org.andrewhitchcock.duwamish.Duwamish;
 import org.andrewhitchcock.duwamish.accumulator.LongSumAccumulator;
+import org.andrewhitchcock.duwamish.example.protos.Examples.IntegerMessage;
+import org.andrewhitchcock.duwamish.example.protos.Examples.ShortestPathPair;
 import org.andrewhitchcock.duwamish.model.Edge;
 import org.andrewhitchcock.duwamish.model.Vertex;
 
@@ -12,6 +14,53 @@ import org.andrewhitchcock.duwamish.model.Vertex;
  * Single source shortest path.
  */
 public class ShortestPath {
+  
+  public static class ShortestPathVertex extends Vertex<ShortestPathPair, IntegerMessage, ShortestPathPair> {
+    
+    @Override
+    public ShortestPathPair compute(String vertexId, ShortestPathPair value, Iterable<ShortestPathPair> messages, Context<ShortestPathPair, IntegerMessage, ShortestPathPair> context) {
+      ShortestPathPair bestPair = value;
+      boolean switchedPair = false;
+      
+      for (ShortestPathPair pair : messages) {
+        if (bestPair == null || pair.getPathValue() < bestPair.getPathValue()) {
+          bestPair = pair;
+          switchedPair = true;
+        }
+      }
+      
+      if (switchedPair || (bestPair != null && context.getSuperstepNumber() == 0)) {
+        for (Edge<IntegerMessage> outEdge : context.getEdgeIterable()) {
+          context.sendMessageTo(
+              outEdge.getTargetVertexId(),
+              ShortestPathPair.newBuilder()
+                .setFromVertex(vertexId)
+                .setPathValue(bestPair.getPathValue() + outEdge.getValue().getValue())
+                .build());
+        }
+      } else {
+        context.voteToHalt();
+      }
+      
+      if (bestPair != null) {
+        context.emitAccumulation("NonNullCount", 1L);
+        context.emitAccumulation("TotalValue", (long)bestPair.getPathValue());
+      }
+      
+      if (vertexId.equals("20")) {
+        if (bestPair == null) {
+          System.out.println("From: null");
+          System.out.println("Value: null");
+        } else {
+          System.out.println("From: " + bestPair.getFromVertex());
+          System.out.println("Value: " + bestPair.getPathValue());
+        }
+      }
+      
+      return bestPair;
+    }
+  }
+  
   public static void main(String[] args) {
     Random random = new Random();
     
@@ -23,77 +72,32 @@ public class ShortestPath {
       random.setSeed(Long.parseLong(args[1]));
     }
     
-    final class Pair {
-      public final String fromVertex;
-      public final Integer pathValue;
-      
-      public Pair(String fromVertex, Integer pathValue) {
-        this.fromVertex = fromVertex;
-        this.pathValue = pathValue;
-      }
-    }
     
-    class ShortestPathVertex extends Vertex<Pair, Integer, Pair> {
-      public ShortestPathVertex(String vertexId) {
-        super(vertexId);
-      }
-      
-      @Override
-      public void compute(Iterable<Pair> messages, Context<Pair, Integer, Pair> context) {
-        Pair bestPair = getValue();
-        boolean switchedPair = false;
-        
-        for (Pair pair : messages) {
-          if (bestPair == null || pair.pathValue < bestPair.pathValue) {
-            bestPair = pair;
-            switchedPair = true;
-          }
-        }
-        
-        if (switchedPair || (bestPair != null && context.getSuperstepNumber() == 0)) {
-          for (Edge<Integer> outEdge : context.getEdgeIterable()) {
-            context.sendMessageTo(outEdge.getTargetVertexId(), new Pair(getVertexId(), bestPair.pathValue + outEdge.getValue()));
-          }
-        } else {
-          context.voteToHalt();
-        }
-        
-        setValue(bestPair);
-        
-        if (bestPair != null) {
-          context.emitAccumulation("NonNullCount", 1L);
-          context.emitAccumulation("TotalValue", (long)bestPair.pathValue);
-        }
-        
-        if (getVertexId().equals("20"))
-          if (bestPair == null) {
-            System.out.println("From: null");
-            System.out.println("Value: null");
-          } else {
-            System.out.println("From: " + bestPair.fromVertex);
-            System.out.println("Value: " + bestPair.pathValue);
-          }
-      }
-    }
     
-    Duwamish<Pair, Integer, Pair> duwamish = Duwamish.createWithPartitionCount(32);
+    Duwamish<ShortestPathVertex, ShortestPathPair, IntegerMessage, ShortestPathPair> duwamish = Duwamish.newBuilder()
+      .withVertex(ShortestPathVertex.class)
+      .withVertexType(ShortestPathPair.class)
+      .withEdgeType(IntegerMessage.class)
+      .withMessageType(ShortestPathPair.class)
+      .build();
     duwamish.addAccumulator("NonNullCount", new LongSumAccumulator());
     duwamish.addAccumulator("TotalValue", new LongSumAccumulator());
     
     // Setup vertexes and edges
     for (int i = 0 ; i < vertexCount; i++) {
       String id = Integer.toString(i);
-      ShortestPathVertex vertex = new ShortestPathVertex(id);
-      duwamish.addVertex(vertex);
-      
       if (i == 0) {
-        vertex.setValue(new Pair("0", 0));
+        duwamish.addVertex(id, ShortestPathPair.newBuilder().setFromVertex("0").setPathValue(0).build());
+      } else {
+        duwamish.addVertex(id, null);
       }
       
       int outEdges = random.nextInt(maxEdgeCountPerVertex);
       for (int j = 0; j < outEdges; j++) {
-        Edge<Integer> edge = new Edge<Integer>(Integer.toString(random.nextInt(vertexCount)), random.nextInt(16364));
-        duwamish.addEdge(id, edge);
+        duwamish.addEdge(
+            id,
+            Integer.toString(random.nextInt(vertexCount)),
+            IntegerMessage.newBuilder().setValue(random.nextInt(16364)).build());
       }
     }
     

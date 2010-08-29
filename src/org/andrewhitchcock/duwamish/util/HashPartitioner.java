@@ -5,15 +5,16 @@ import java.util.List;
 import org.andrewhitchcock.duwamish.Partition;
 import org.andrewhitchcock.duwamish.model.Partitioner;
 
-public class HashPartitioner<V, E, M> extends Partitioner<V, E, M> {
-  private List<Partition<V, E, M>> partitions;
+@SuppressWarnings("unchecked")
+public class HashPartitioner extends Partitioner {
+  private List<Partition> partitions;
   
-  public HashPartitioner(List<Partition<V, E, M>> partitions) { 
+  public HashPartitioner(List<Partition> partitions) { 
     this.partitions = partitions;
   }
   
   @Override
-  public Partition<V, E, M> getPartitionByVertex(String vertexId) {
-    return partitions.get(Math.abs(vertexId.hashCode()) % partitions.size());
+  public int getPartitionIdByVertex(String vertexId) {
+    return Math.abs(vertexId.hashCode()) % partitions.size();
   }
 }

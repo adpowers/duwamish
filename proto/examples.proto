@@ -1,0 +1,35 @@
+option java_package = "org.andrewhitchcock.duwamish.example.protos";
+
+message DoubleMessage {
+  required double value = 1;
+}
+
+message IntegerMessage {
+  required int32 value = 1;
+}
+
+message ShortestPathPair {
+  required string fromVertex = 1;
+  required int32 pathValue = 2;
+}
+
+enum Feature {
+  MOVIE = 0;
+  USER = 1;
+}
+
+message RecommendationsVertexData {
+  repeated double featureVector = 1;
+  optional Feature feature = 2;
+  optional int32 rating = 3;
+  optional double residue = 4;
+}
+
+message FeatureMessage {
+  required Feature feature = 1;
+}
+
+message RecommendationsMessage {
+  required double value = 1;
+  optional Feature feature = 2;
+}

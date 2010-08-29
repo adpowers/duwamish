@@ -1,20 +1,21 @@
 package org.andrewhitchcock.duwamish;
 
 import org.andrewhitchcock.duwamish.model.Edge;
-import org.andrewhitchcock.duwamish.model.Partitioner;
 
 import com.google.common.collect.Multimap;
+import com.google.protobuf.Message;
 
-public class Context<V, E, M> {
+@SuppressWarnings("unchecked")
+public class Context<V extends Message, E extends Message, M extends Message> {
   private long superstepNumber;
   private Iterable<Edge<E>> edgeIterable;
-  private Partitioner<V, E, M> partitioner;
+  private Partition partition;
   private Multimap<String, Object> accumulationMessages;
   private boolean votedToHalt = false;
   
-  public Context(long superstepNumber, Partitioner<V, E, M> partitioner, Multimap<String, Object> accumulationMessages) {
+  public Context(long superstepNumber, Partition partition, Multimap<String, Object> accumulationMessages) {
     this.superstepNumber = superstepNumber;
-    this.partitioner = partitioner;
+    this.partition = partition;
     this.accumulationMessages = accumulationMessages;
   }
   
@@ -31,7 +32,7 @@ public class Context<V, E, M> {
   }
   
   public void sendMessageTo(String vertexId, M message) {
-    partitioner.getPartitionByVertex(vertexId).sendMessage(vertexId, message);
+    partition.sendMessage(vertexId, message);
   }
   
   public void voteToHalt() {
