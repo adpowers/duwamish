@@ -49,7 +49,7 @@ public class MergeSorterTest {
     int encountered = 0;
     while (message != null) {
       if (previous > message.getValue()) {
-        throw new RuntimeException("Bug!");
+        throw new RuntimeException("Bug! Elements not in sorted order.");
       }
       previous = message.getValue();
       encountered++;
@@ -57,7 +57,7 @@ public class MergeSorterTest {
     }
     
     if (encountered != count) {
-      throw new RuntimeException("Bug!");
+      throw new RuntimeException("Bug! Wrong element count.");
     }
     
     return endTime - startTime;

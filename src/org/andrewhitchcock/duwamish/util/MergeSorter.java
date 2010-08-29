@@ -1,7 +1,10 @@
 package org.andrewhitchcock.duwamish.util;
 
+import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.OutputStream;
 import java.lang.reflect.Method;
 import java.util.ArrayDeque;
@@ -11,6 +14,7 @@ import java.util.Deque;
 import java.util.List;
 
 import com.google.common.collect.Lists;
+import com.google.common.io.FileBackedOutputStream;
 import com.google.protobuf.Message;
 
 
@@ -26,7 +30,7 @@ public class MergeSorter<T extends Message> {
   final File tempDir;
   
   int sortCount = 0;
-  Deque<File> mergeQueue = new ArrayDeque<File>();
+  Deque<FileBackedOutputStream> mergeQueue = new ArrayDeque<FileBackedOutputStream>();
   
   final Method builderMethod;
   
@@ -53,21 +57,28 @@ public class MergeSorter<T extends Message> {
     }
     
     // merge files
-    while (!mergeQueue.isEmpty()) {
-      boolean moreThanOnePassLeft = mergeQueue.size() > numberToMergeFromDisk;
-      int currentPassSize = moreThanOnePassLeft ? numberToMergeFromDisk : mergeQueue.size();
-      
-      File[] inputs = new File[currentPassSize];
-      for (int i = 0; i < currentPassSize; i++) {
-        inputs[i] = mergeQueue.pop();
+    try {
+      while (!mergeQueue.isEmpty()) {
+        boolean moreThanOnePassLeft = mergeQueue.size() > numberToMergeFromDisk;
+        int currentPassSize = moreThanOnePassLeft ? numberToMergeFromDisk : mergeQueue.size();
+        
+        InputStream[] inputs = new InputStream[currentPassSize];
+        for (int i = 0; i < currentPassSize; i++) {
+          inputs[i] = new BufferedInputStream(mergeQueue.pop().getSupplier().getInput());
+        }
+        
+        OutputStream output = moreThanOnePassLeft ? getNextOutputStream() : FileUtil.newOutputStream(outputFile);
+        mergeInputStreams(output, inputs);
+        
+        FileUtil.closeAll(inputs);
+        if (moreThanOnePassLeft) {
+          ((BufferedOutputStream) output).flush();
+        } else {
+          output.close();
+        }
       }
-      
-      File output = moreThanOnePassLeft ? getNextFile() : outputFile;
-      mergeInputFiles(output, inputs);
-      
-      for (int i = 0; i < currentPassSize; i++) {
-        inputs[i].delete();
-      }
+    } catch (IOException e) {
+      throw new RuntimeException(e);
     }
   }
   
@@ -87,7 +98,7 @@ public class MergeSorter<T extends Message> {
         pos = 0;
       }
       if (inMemorySortedArrays.size() > numberToMergeInMemory) {
-        mergeInMemorySortedArrays(getNextFile(), inMemorySortedArrays);
+        mergeInMemorySortedArrays(getNextOutputStream(), inMemorySortedArrays);
       }
       
       records[pos] = inputReader.next();
@@ -99,26 +110,30 @@ public class MergeSorter<T extends Message> {
       inMemorySortedArrays.add(records);
     }
     if (!inMemorySortedArrays.isEmpty()) {
-      mergeInMemorySortedArrays(getNextFile(), inMemorySortedArrays);
+      mergeInMemorySortedArrays(getNextOutputStream(), inMemorySortedArrays);
     }
     
     FileUtil.closeAll(inputReader);
   }
   
   @SuppressWarnings("unchecked")
-  private void mergeInMemorySortedArrays(File outputFile, List<Object[]> inMemorySortedArrays) {
+  private void mergeInMemorySortedArrays(BufferedOutputStream outputStream, List<Object[]> inMemorySortedArrays) {
     ProtocolBufferReader<T>[] entries = new ProtocolBufferReader[inMemorySortedArrays.size()];
     for (int i = 0; i < entries.length; i++) {
       entries[i] = ProtocolBufferReader.newReader(inMemorySortedArrays.get(i));
     }
     inMemorySortedArrays.clear();
     
-    merge(outputFile, entries);
+    merge(outputStream, entries);
+    
+    try {
+      outputStream.flush();
+    } catch (IOException e) {
+      throw new RuntimeException(e);
+    }
   }
   
-  private void merge(File outputFile, ProtocolBufferReader<T>[] entries) {
-    OutputStream outputStream = FileUtil.newOutputStream(outputFile);
-    
+  private void merge(OutputStream outputStream, ProtocolBufferReader<T>[] entries) {
     try {
       int bestSoFar = returnLowestIndex(entries);
       while (bestSoFar != -1) {
@@ -128,8 +143,6 @@ public class MergeSorter<T extends Message> {
     } catch (IOException e) {
       throw new RuntimeException(e);
     }
-    
-    FileUtil.closeAll(outputStream);
   }
   
   @SuppressWarnings("unchecked")
@@ -148,23 +161,19 @@ public class MergeSorter<T extends Message> {
     return bestIndexSoFar;
   }
   
-  private void mergeInputFiles(File outputFile, File ... inputFiles) {
+  private void mergeInputStreams(OutputStream outputStream, InputStream ... inputStreams) {
     @SuppressWarnings("unchecked")
-    ProtocolBufferReader<T>[] entries = new ProtocolBufferReader[inputFiles.length];
-    for (int i = 0; i < inputFiles.length; i++) {
-      entries[i] = ProtocolBufferReader.newReader(clazz, FileUtil.newInputStream(inputFiles[i]));
+    ProtocolBufferReader<T>[] entries = new ProtocolBufferReader[inputStreams.length];
+    for (int i = 0; i < inputStreams.length; i++) {
+      entries[i] = ProtocolBufferReader.newReader(clazz, inputStreams[i]);
     }
 
-    merge(outputFile, entries);
-    
-    for (int i = 0; i < inputFiles.length; i++) {
-      FileUtil.closeAll(entries[i]);
-    }
+    merge(outputStream, entries);
   }
   
-  private File getNextFile() {
-    File temp = new File(tempDir, "part-" + sortCount++);
+  private BufferedOutputStream getNextOutputStream() {
+    FileBackedOutputStream temp = new FileBackedOutputStream(1024 * 1024); // 1 MB
     mergeQueue.addLast(temp);
-    return temp;
+    return new BufferedOutputStream(temp);
   }
 }
