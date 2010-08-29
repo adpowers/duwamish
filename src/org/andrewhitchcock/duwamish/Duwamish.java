@@ -134,13 +134,11 @@ public class Duwamish<C extends Vertex<V, E, M>, V extends Message, E extends Me
   }
   
   public void run(int runCount) {
-    // Prepare for first run
-    for (Partition partition : partitions) {
-      partition.prepareForFirstRun();
-    }
-    
     int threadPoolSize = 8;
+
     try {
+      firstRun(threadPoolSize);
+    
       for (long superstepNumber = 0; superstepNumber < runCount; superstepNumber++) {
         before(threadPoolSize);
         
@@ -161,6 +159,21 @@ public class Duwamish<C extends Vertex<V, E, M>, V extends Message, E extends Me
       }
     } catch (Exception e) {
       throw new RuntimeException(e);
+    }
+  }
+  
+  private void firstRun(int threadPoolSize) throws InterruptedException, ExecutionException {
+    List<Future<Object>> futures = Lists.newArrayList();
+    
+    ExecutorService executor = Executors.newFixedThreadPool(threadPoolSize);
+    for (Partition partition : partitions) {
+      futures.add(executor.submit(new FirstRunCallable(partition)));
+    }
+    executor.shutdown();
+    executor.awaitTermination(Long.MAX_VALUE, TimeUnit.DAYS);
+    
+    for (Future<Object> future : futures) {
+      future.get(); // ensure we see all exceptions
     }
   }
   
@@ -225,6 +238,20 @@ public class Duwamish<C extends Vertex<V, E, M>, V extends Message, E extends Me
     return new DefaultHaltDecider().shouldHalt(superstepNumber, accumulations);
   }
   
+  
+  private static class FirstRunCallable implements Callable<Object> {
+    Partition partition;
+    
+    public FirstRunCallable(Partition partition) {
+      this.partition = partition;
+    }
+    
+    @Override
+    public Object call() {
+      partition.prepareForFirstRun();
+      return null;
+    }
+  }
   
   private static class BeforeCallable implements Callable<Object> {
     Partition partition;
