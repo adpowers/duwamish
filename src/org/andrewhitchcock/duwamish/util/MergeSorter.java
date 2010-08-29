@@ -6,7 +6,6 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.lang.reflect.Method;
 import java.util.ArrayDeque;
 import java.util.Arrays;
 import java.util.Comparator;
@@ -20,27 +19,19 @@ import com.google.protobuf.Message;
 
 public class MergeSorter<T extends Message> {
   
-  final int recordsToSortAtOnce = 1000;
-  final int numberToMergeInMemory = 20;
-  final int numberToMergeFromDisk = 50;
+  private final int recordsToSortAtOnce = 1000;
+  private final int numberToMergeInMemory = 20;
+  private final int numberToMergeFromDisk = 50;
 
-  final Class<T> clazz;
+  private final Class<T> clazz;
   @SuppressWarnings("unchecked")
-  final Comparator comparator;
+  private final Comparator comparator;
   
-  int sortCount = 0;
-  Deque<FileBackedOutputStream> mergeQueue = new ArrayDeque<FileBackedOutputStream>();
-  
-  final Method builderMethod;
+  private Deque<FileBackedOutputStream> mergeQueue = new ArrayDeque<FileBackedOutputStream>();
   
   private MergeSorter(Class<T> clazz, Comparator<T> comparator) {
     this.clazz = clazz;
     this.comparator = comparator;
-    try {
-      this.builderMethod = clazz.getMethod("newBuilder");
-    } catch (Exception e) {
-      throw new RuntimeException();
-    }
   }
   
   public static <T extends Message> MergeSorter<T> create(Class<T> clazz, Comparator<T> comparator) {
