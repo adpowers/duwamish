@@ -43,7 +43,6 @@ public class Partition<C extends Vertex<V, E, M>, V extends Message, E extends M
   private final int partitionNumber;
   
   private final File tempDir;
-  private final File localTempDir;
 
   private final File edgeFile;
   private final File vertexFile;
@@ -65,7 +64,6 @@ public class Partition<C extends Vertex<V, E, M>, V extends Message, E extends M
   public Partition(DuwamishContext<C, V, E, M> duwamishContext, Map<String, Accumulator> accumulators, File tempDir, int partitionCount, int partitionNumber) {
     this.accumulators = accumulators;
     this.tempDir = tempDir;
-    this.localTempDir = new File(tempDir, "partition-" + partitionNumber);
     this.partitionCount = partitionCount;
     this.partitionNumber = partitionNumber;
     this.edgeFile = new File(tempDir, "edge-" + partitionNumber);
@@ -130,8 +128,8 @@ public class Partition<C extends Vertex<V, E, M>, V extends Message, E extends M
     edgeFile.renameTo(tempEdgeFile);
     vertexFile.renameTo(tempVertexFile);
     
-    MergeSorter.create(org.andrewhitchcock.duwamish.protos.Duwamish.Edge.class, Comparators.newEdgeComparator(), localTempDir).sort(edgeFile, tempEdgeFile);
-    MergeSorter.create(org.andrewhitchcock.duwamish.protos.Duwamish.Vertex.class, Comparators.newVertexComparator(), localTempDir).sort(vertexFile, tempVertexFile);
+    MergeSorter.create(org.andrewhitchcock.duwamish.protos.Duwamish.Edge.class, Comparators.newEdgeComparator()).sort(edgeFile, tempEdgeFile);
+    MergeSorter.create(org.andrewhitchcock.duwamish.protos.Duwamish.Vertex.class, Comparators.newVertexComparator()).sort(vertexFile, tempVertexFile);
     
     tempEdgeFile.delete();
     tempVertexFile.delete();
@@ -165,8 +163,8 @@ public class Partition<C extends Vertex<V, E, M>, V extends Message, E extends M
     
     MergeSorter.create(
         org.andrewhitchcock.duwamish.protos.Duwamish.Message.class,
-        Comparators.newMessageComparator(),
-        localTempDir).sort(messageFile, incomingMessageFiles.toArray(new File[0]));
+        Comparators.newMessageComparator())
+        .sort(messageFile, incomingMessageFiles.toArray(new File[0]));
     
     for (File incomingMessageFile : incomingMessageFiles) {
       incomingMessageFile.delete();
@@ -258,11 +256,7 @@ public class Partition<C extends Vertex<V, E, M>, V extends Message, E extends M
       vertexFile.delete();
     }
     
-    MergeSorter.create(org.andrewhitchcock.duwamish.protos.Duwamish.Vertex.class, Comparators.newVertexComparator(), localTempDir).sort(vertexFile, newVertexFile);
-    
-    if (newVertexFile.exists()) {
-      newVertexFile.delete();
-    }
+    newVertexFile.renameTo(vertexFile);
   }
   
   @SuppressWarnings("unchecked")

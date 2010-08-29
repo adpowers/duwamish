@@ -38,7 +38,7 @@ public class MergeSorterTest {
     
     long startTime = System.currentTimeMillis();
 
-    MergeSorter<DoubleMessage> ms = MergeSorter.create(DoubleMessage.class, new DoubleMessageComparator(), new File("/tmp/merger/"));
+    MergeSorter<DoubleMessage> ms = MergeSorter.create(DoubleMessage.class, new DoubleMessageComparator());
     ms.sort(outputFile, inputFile);
     
     long endTime = System.currentTimeMillis();

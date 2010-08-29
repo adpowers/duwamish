@@ -27,17 +27,15 @@ public class MergeSorter<T extends Message> {
   final Class<T> clazz;
   @SuppressWarnings("unchecked")
   final Comparator comparator;
-  final File tempDir;
   
   int sortCount = 0;
   Deque<FileBackedOutputStream> mergeQueue = new ArrayDeque<FileBackedOutputStream>();
   
   final Method builderMethod;
   
-  private MergeSorter(Class<T> clazz, Comparator<T> comparator, File tempDir) {
+  private MergeSorter(Class<T> clazz, Comparator<T> comparator) {
     this.clazz = clazz;
     this.comparator = comparator;
-    this.tempDir = tempDir;
     try {
       this.builderMethod = clazz.getMethod("newBuilder");
     } catch (Exception e) {
@@ -45,8 +43,8 @@ public class MergeSorter<T extends Message> {
     }
   }
   
-  public static <T extends Message> MergeSorter<T> create(Class<T> clazz, Comparator<T> comparator, File tempDir) {
-    return new MergeSorter<T>(clazz, comparator, tempDir);
+  public static <T extends Message> MergeSorter<T> create(Class<T> clazz, Comparator<T> comparator) {
+    return new MergeSorter<T>(clazz, comparator);
   }
   
   
