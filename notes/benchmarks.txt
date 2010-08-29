@@ -10,3 +10,13 @@ org.andrewhitchcock.duwamish.example.PageRank 5000, 1 bestTime 3573
 org.andrewhitchcock.duwamish.example.PageRank 20000, 1 bestTime 13749
 org.andrewhitchcock.duwamish.example.PageRank 100000, 1 bestTime 88499
 org.andrewhitchcock.duwamish.example.PageRank 250000, 1 bestTime 348403
+
+d57957aa35fcec0ed45b0b6807af89ce4ef12b3e
+org.andrewhitchcock.duwamish.example.Recommendations 1000, 10000, 64, 1 bestTime 5165266
+org.andrewhitchcock.duwamish.example.ShortestPath 5000, 1 bestTime 15853
+org.andrewhitchcock.duwamish.example.ShortestPath 20000, 1 bestTime 66342
+org.andrewhitchcock.duwamish.example.ShortestPath 100000, 1 bestTime 393963
+org.andrewhitchcock.duwamish.example.ShortestPath 250000, 1 bestTime 1124777
+org.andrewhitchcock.duwamish.example.ShortestPath 500000, 1 bestTime 2287937
+org.andrewhitchcock.duwamish.example.PageRank 5000, 1 bestTime 63241
+org.andrewhitchcock.duwamish.example.PageRank 20000, 1 bestTime 269789
