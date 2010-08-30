@@ -20,3 +20,9 @@ org.andrewhitchcock.duwamish.example.ShortestPath 250000, 1 bestTime 1124777
 org.andrewhitchcock.duwamish.example.ShortestPath 500000, 1 bestTime 2287937
 org.andrewhitchcock.duwamish.example.PageRank 5000, 1 bestTime 63241
 org.andrewhitchcock.duwamish.example.PageRank 20000, 1 bestTime 269789
+
+a4577a919ebee7c8c6b55638806cd1246298288a
+org.andrewhitchcock.duwamish.example.ShortestPath 5000, 1 bestTime 15206
+org.andrewhitchcock.duwamish.example.ShortestPath 20000, 1 bestTime 65194
+org.andrewhitchcock.duwamish.example.PageRank 5000, 1 bestTime 62185
+org.andrewhitchcock.duwamish.example.PageRank 20000, 1 bestTime 288528
