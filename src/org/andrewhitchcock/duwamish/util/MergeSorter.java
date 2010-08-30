@@ -38,11 +38,23 @@ public class MergeSorter<T extends Message> {
     return new MergeSorter<T>(clazz, comparator);
   }
   
-  
   public void sort(File outputFile, File ... inputFiles) {
+    OutputStream outputStream = FileUtil.newOutputStream(outputFile);
+    InputStream[] inputStreams = new InputStream[inputFiles.length];
+    for (int i = 0; i < inputFiles.length; i++) {
+      inputStreams[i] = FileUtil.newInputStream(inputFiles[i]);
+    }
+    
+    sort(outputStream, inputStreams);
+    
+    FileUtil.closeAll(outputStream);
+    FileUtil.closeAll(inputStreams);
+  }
+  
+  public void sort(OutputStream outputStream, InputStream ... inputStreams) {
     // sort each input file
-    for (File inputFile : inputFiles) {
-      sortOneFile(inputFile);
+    for (InputStream inputStream : inputStreams) {
+      sortOneFile(inputStream);
     }
     
     // merge files
@@ -56,14 +68,12 @@ public class MergeSorter<T extends Message> {
           inputs[i] = new BufferedInputStream(mergeQueue.pop().getSupplier().getInput());
         }
         
-        OutputStream output = moreThanOnePassLeft ? getNextOutputStream() : FileUtil.newOutputStream(outputFile);
+        OutputStream output = moreThanOnePassLeft ? getNextOutputStream() : outputStream;
         mergeInputStreams(output, inputs);
         
         FileUtil.closeAll(inputs);
         if (moreThanOnePassLeft) {
           ((BufferedOutputStream) output).flush();
-        } else {
-          output.close();
         }
       }
     } catch (IOException e) {
@@ -72,8 +82,8 @@ public class MergeSorter<T extends Message> {
   }
   
   @SuppressWarnings("unchecked")
-  private void sortOneFile(File inputFile) {
-    ProtocolBufferReader<T> inputReader = ProtocolBufferReader.newReader(clazz, FileUtil.newInputStream(inputFile));
+  private void sortOneFile(InputStream inputStream) {
+    ProtocolBufferReader<T> inputReader = ProtocolBufferReader.newReader(clazz, inputStream);
 
     List<Object[]> inMemorySortedArrays = Lists.newArrayList();
     Object[] records = new Object[recordsToSortAtOnce];

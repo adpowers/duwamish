@@ -1,12 +1,13 @@
 package org.andrewhitchcock.duwamish;
 
+import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.lang.reflect.Method;
 import java.util.Collection;
 import java.util.Iterator;
-import java.util.List;
 import java.util.Map;
 
 import org.andrewhitchcock.duwamish.Duwamish.DuwamishContext;
@@ -22,13 +23,15 @@ import org.andrewhitchcock.duwamish.util.ProtocolBufferReader;
 
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.ForwardingMultimap;
-import com.google.common.collect.Lists;
 import com.google.common.collect.Multimap;
+import com.google.common.io.FileBackedOutputStream;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.Message;
 import com.google.protobuf.Message.Builder;
 
 public class Partition<C extends Vertex<V, E, M>, V extends Message, E extends Message, M extends Message> {
+  
+  private final int incomingMessageThreshold = 1024 * 1024;
   
   @SuppressWarnings("unchecked")
   private Map<String, Accumulator> accumulators;
@@ -39,14 +42,11 @@ public class Partition<C extends Vertex<V, E, M>, V extends Message, E extends M
   private final Method newEdgeBuilder;
   private final Method newMessageBuilder;
   
-  private final int partitionCount;
-  private final int partitionNumber;
-  
-  private final File tempDir;
+  @SuppressWarnings("unchecked")
+  private Partition[] partitions;
 
   private final File edgeFile;
   private final File vertexFile;
-  private final File messageFile;
   
   private final File newVertexFile;
   
@@ -57,28 +57,21 @@ public class Partition<C extends Vertex<V, E, M>, V extends Message, E extends M
   private ProtocolBufferReader<org.andrewhitchcock.duwamish.protos.Duwamish.Edge> edgeReader;
   private ProtocolBufferReader<org.andrewhitchcock.duwamish.protos.Duwamish.Message> messageReader;
   
-  private File[] messageFiles;
-  private OutputStream[] messageFileWriters;
+  private FileBackedOutputStream incomingMessages;
+  private BufferedOutputStream[] messageWriters;
   
   @SuppressWarnings("unchecked")
-  public Partition(DuwamishContext<C, V, E, M> duwamishContext, Map<String, Accumulator> accumulators, File tempDir, int partitionCount, int partitionNumber) {
+  public Partition(DuwamishContext<C, V, E, M> duwamishContext, Map<String, Accumulator> accumulators, File tempDir, Partition[] partitions, int partitionNumber) {
     this.accumulators = accumulators;
-    this.tempDir = tempDir;
-    this.partitionCount = partitionCount;
-    this.partitionNumber = partitionNumber;
+    this.partitions = partitions;
     this.edgeFile = new File(tempDir, "edge-" + partitionNumber);
     this.vertexFile = new File(tempDir, "vertex-" + partitionNumber);
-    this.messageFile = new File(tempDir, "message-" + partitionNumber);
     this.newVertexFile = new File(tempDir, "new-vertex-" + partitionNumber);
     
     this.edgeFileWriter = FileUtil.newOutputStream(edgeFile);
     this.vertexFileWriter = FileUtil.newOutputStream(vertexFile);
     
-    messageFiles = new File[partitionCount];
-    for (int i = 0; i < partitionCount; i++) {
-      messageFiles[i] = new File(tempDir, "message-" + partitionNumber + "-" + i);
-    }
-    messageFileWriters = new OutputStream[partitionCount];
+    this.incomingMessages = new FileBackedOutputStream(incomingMessageThreshold);
     
     try {
       vertex = duwamishContext.vertexClass.newInstance();
@@ -141,7 +134,7 @@ public class Partition<C extends Vertex<V, E, M>, V extends Message, E extends M
       org.andrewhitchcock.duwamish.protos.Duwamish.Message.newBuilder()
         .setDestination(vertexId)
         .setValue(message.toByteString())
-        .build().writeDelimitedTo(messageFileWriters[targetPartitionId]);
+        .build().writeDelimitedTo(messageWriters[targetPartitionId]);
     } catch (IOException e) {
       throw new RuntimeException(e);
     }
@@ -152,45 +145,34 @@ public class Partition<C extends Vertex<V, E, M>, V extends Message, E extends M
   }
   
   public void before() {
-    // Sort incoming messages
-    List<File> incomingMessageFiles = Lists.newArrayList();
-    for (int i = 0; i < partitionCount; i++) {
-      File incomingMessageFile = new File(tempDir, "message-" + i + "-" + partitionNumber);
-      if (incomingMessageFile.exists()) {
-        incomingMessageFiles.add(incomingMessageFile);
-      }
-    }
-    
-    MergeSorter.create(
-        org.andrewhitchcock.duwamish.protos.Duwamish.Message.class,
-        Comparators.newMessageComparator())
-        .sort(messageFile, incomingMessageFiles.toArray(new File[0]));
-    
-    for (File incomingMessageFile : incomingMessageFiles) {
-      incomingMessageFile.delete();
-    }
-    
-    if (!messageFile.exists()) {
-      try {
-        messageFile.createNewFile();
-      } catch (IOException e) {
-        throw new RuntimeException(e);
-      }
+    try {
+      // Sort incoming messages
+      FileBackedOutputStream messages = new FileBackedOutputStream(incomingMessageThreshold);
+  
+      MergeSorter.create(
+          org.andrewhitchcock.duwamish.protos.Duwamish.Message.class,
+          Comparators.newMessageComparator())
+          .sort(messages, new BufferedInputStream(incomingMessages.getSupplier().getInput()));
+      
+      incomingMessages = new FileBackedOutputStream(incomingMessageThreshold);
+      
+      // Open readers
+      vertexReader = ProtocolBufferReader.newReader(org.andrewhitchcock.duwamish.protos.Duwamish.Vertex.class, FileUtil.newInputStream(vertexFile));
+      edgeReader = ProtocolBufferReader.newReader(org.andrewhitchcock.duwamish.protos.Duwamish.Edge.class, FileUtil.newInputStream(edgeFile));
+      messageReader = ProtocolBufferReader.newReader(org.andrewhitchcock.duwamish.protos.Duwamish.Message.class, new BufferedInputStream(messages.getSupplier().getInput()));
+      
+      // Open new vertex value writer
+      vertexFileWriter = FileUtil.newOutputStream(newVertexFile);
+    } catch (IOException e) {
+      throw new RuntimeException(e);
     }
   }
   
   public Map<String, Object> runSuperstep(long superstepNumber) {
-    // Open readers
-    vertexReader = ProtocolBufferReader.newReader(org.andrewhitchcock.duwamish.protos.Duwamish.Vertex.class, FileUtil.newInputStream(vertexFile));
-    edgeReader = ProtocolBufferReader.newReader(org.andrewhitchcock.duwamish.protos.Duwamish.Edge.class, FileUtil.newInputStream(edgeFile));
-    messageReader = ProtocolBufferReader.newReader(org.andrewhitchcock.duwamish.protos.Duwamish.Message.class, FileUtil.newInputStream(messageFile));
-    
-    // Open new vertex value writer
-    vertexFileWriter = FileUtil.newOutputStream(newVertexFile);
-    
     // Open outgoing message writers
-    for (int i = 0; i < messageFiles.length; i++) {
-      messageFileWriters[i] = FileUtil.newOutputStream(messageFiles[i]);
+    messageWriters = new BufferedOutputStream[partitions.length];
+    for (int i = 0; i < messageWriters.length; i++) {
+      messageWriters[i] = new BufferedOutputStream(partitions[i].incomingMessages);
     }
     
     Multimap<String, Object> accumulationMessages = CombiningMultimap.create(accumulators, 128);
@@ -241,17 +223,21 @@ public class Partition<C extends Vertex<V, E, M>, V extends Message, E extends M
   
   public void after() {
     FileUtil.closeAll(vertexReader, edgeReader, messageReader, vertexFileWriter);
-    FileUtil.closeAll(messageFileWriters);
+    
+    for (int i = 0; i < messageWriters.length; i++) {
+      try {
+        messageWriters[i].flush();
+      } catch (IOException e) {
+        throw new RuntimeException(e);
+      }
+    }
+    messageWriters = null;
     
     vertexReader = null;
     edgeReader = null;
     messageReader = null;
     vertexFileWriter = null;
-    messageFileWriters = new OutputStream[partitionCount];
     
-    if (messageFile.exists()) {
-      messageFile.delete();
-    }
     if (vertexFile.exists()) {
       vertexFile.delete();
     }

@@ -3,4 +3,3 @@ Ideas
 * For vertexes, have two byte arrays, one that stores the active vertexes and another for inactive.
 ** Do a merge sort on these two arrays when scanning through them.
 * Replace the Edge with a MappedByteBuffer backed InputStream. Do we get a speed up?
-* Switch to FileBackedOutputStream (and compliments) so small buffers are kept in memory.

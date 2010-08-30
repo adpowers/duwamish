@@ -34,7 +34,7 @@ public class Duwamish<C extends Vertex<V, E, M>, V extends Message, E extends Me
   
   private Map<String, Accumulator> accumulators;
 
-  private List<Partition> partitions;
+  private Partition[] partitions;
   private Partitioner partitioner;
   
   private HaltDecider haltDecider;
@@ -61,14 +61,14 @@ public class Duwamish<C extends Vertex<V, E, M>, V extends Message, E extends Me
     tempDir.mkdirs();
     tempDir.deleteOnExit();
 
-    this.partitions = Lists.newArrayListWithCapacity(partitionCount);
+    this.partitions = new Partition[partitionCount];
     for (int i = 0; i < partitionCount; i++) {
-      partitions.add(new Partition<C, V, E, M>(duwamishContext, accumulators, tempDir, partitionCount, i));
+      partitions[i] = new Partition<C, V, E, M>(duwamishContext, accumulators, tempDir, partitions, i);
     }
     
-    this.partitioner = new HashPartitioner(partitions);
+    this.partitioner = new HashPartitioner(Lists.newArrayList(partitions));
     for (int i = 0; i < partitionCount; i++) {
-      partitions.get(i).setup(partitioner);
+      partitions[i].setup(partitioner);
     }
   }
   
@@ -126,11 +126,11 @@ public class Duwamish<C extends Vertex<V, E, M>, V extends Message, E extends Me
   }
   
   public void addVertex(String id, V value) {
-    partitions.get(partitioner.getPartitionIdByVertex(id)).addVertex(id, value);
+    partitions[partitioner.getPartitionIdByVertex(id)].addVertex(id, value);
   }
   
   public void addEdge(String fromId, String toId, E value) {
-    partitions.get(partitioner.getPartitionIdByVertex(fromId)).addEdge(fromId, toId, value);
+    partitions[partitioner.getPartitionIdByVertex(fromId)].addEdge(fromId, toId, value);
   }
   
   public void run(int runCount) {
