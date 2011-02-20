@@ -1,0 +1,7 @@
+A multi-threaded single node clone of Google's Pregel graph processing system. It is
+written in Java and released under an Apache 2.0 license.
+
+Vertex, edge, and message data structures are all defined using protocol buffers.
+
+For more information on Pregel, see:
+http://googleresearch.blogspot.com/2009/06/large-scale-graph-computing-at-google.html
